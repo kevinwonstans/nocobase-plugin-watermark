@@ -4,6 +4,7 @@
   "Enable watermark": "启用水印",
   "Watermark text": "水印文字",
   "Watermark opacity": "透明度",
+  "Current opacity": "当前透明度：{{value}}",
   "Watermark font size": "字号",
   "Watermark density": "排列密度",
   "Sparse": "稀疏",

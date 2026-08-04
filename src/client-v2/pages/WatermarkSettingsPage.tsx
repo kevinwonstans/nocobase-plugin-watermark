@@ -13,7 +13,9 @@ export default function WatermarkSettingsPage() {
   return (
     <WatermarkSettingsForm
       api={app.apiClient}
-      t={(key: string) => app.i18n.t(key, { ns: PACKAGE_NAME })}
+      t={(key: string, options?: Record<string, unknown>) =>
+        app.i18n.t(key, { ns: PACKAGE_NAME, ...options })
+      }
       notifySaved={() =>
         app.eventBus.dispatchEvent(new CustomEvent(WATERMARK_SETTINGS_CHANGED_EVENT))
       }

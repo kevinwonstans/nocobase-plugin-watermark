@@ -51,6 +51,7 @@ function WatermarkSettingsForm({ api, t, notifySaved }) {
   const [form] = import_antd.Form.useForm();
   const [loading, setLoading] = (0, import_react.useState)(false);
   const [saving, setSaving] = (0, import_react.useState)(false);
+  const opacityValue = import_antd.Form.useWatch("opacity", form);
   const load = async () => {
     var _a;
     setLoading(true);
@@ -111,7 +112,16 @@ function WatermarkSettingsForm({ api, t, notifySaved }) {
         },
         /* @__PURE__ */ import_react.default.createElement(import_antd.Input, { placeholder: `${import_watermark.DEFAULT_SETTINGS.text}`, maxLength: 200 })
       ),
-      /* @__PURE__ */ import_react.default.createElement(import_antd.Form.Item, { name: "opacity", label: t("Watermark opacity"), rules: [{ required: true }] }, /* @__PURE__ */ import_react.default.createElement(import_antd.InputNumber, { min: 0.05, max: 1, step: 0.05, style: { width: 200 } })),
+      /* @__PURE__ */ import_react.default.createElement(
+        import_antd.Form.Item,
+        {
+          name: "opacity",
+          label: t("Watermark opacity"),
+          extra: t("Current opacity", { value: opacityValue ?? import_watermark.DEFAULT_SETTINGS.opacity }),
+          rules: [{ required: true }]
+        },
+        /* @__PURE__ */ import_react.default.createElement(import_antd.Slider, { min: 0.05, max: 1, step: 0.05 })
+      ),
       /* @__PURE__ */ import_react.default.createElement(import_antd.Form.Item, { name: "fontSize", label: t("Watermark font size"), rules: [{ required: true }] }, /* @__PURE__ */ import_react.default.createElement(import_antd.InputNumber, { min: 8, max: 64, step: 1, style: { width: 200 }, addonAfter: "px" })),
       /* @__PURE__ */ import_react.default.createElement(import_antd.Form.Item, { name: "density", label: t("Watermark density"), rules: [{ required: true }] }, /* @__PURE__ */ import_react.default.createElement(import_antd.Radio.Group, null, /* @__PURE__ */ import_react.default.createElement(import_antd.Space, { direction: "vertical" }, DENSITY_OPTIONS.map((option) => /* @__PURE__ */ import_react.default.createElement(import_antd.Radio, { key: option.value, value: option.value }, t(option.labelKey)))))),
       /* @__PURE__ */ import_react.default.createElement(import_antd.Form.Item, null, /* @__PURE__ */ import_react.default.createElement(import_antd.Button, { type: "primary", htmlType: "submit", loading: saving }, t("Save")))

@@ -3,7 +3,7 @@
  * 通过 props 注入 api / t / notifySaved，避免依赖具体客户端包。
  */
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Radio, Space, Switch, message } from 'antd';
+import { Button, Card, Form, Input, InputNumber, Radio, Slider, Space, Switch, message } from 'antd';
 import { DEFAULT_SETTINGS, WatermarkDensity } from './watermark';
 
 interface ApiLike {
@@ -12,7 +12,7 @@ interface ApiLike {
 
 interface WatermarkSettingsFormProps {
   api: ApiLike;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
   /** 保存成功后通知水印运行时立即刷新 */
   notifySaved: () => void;
 }
@@ -35,6 +35,8 @@ export default function WatermarkSettingsForm({ api, t, notifySaved }: Watermark
   const [form] = Form.useForm<FormValues>();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 实时监听透明度值，用于滑动条下方的当前值提示
+  const opacityValue = Form.useWatch('opacity', form);
 
   const load = async () => {
     setLoading(true);
@@ -97,8 +99,13 @@ export default function WatermarkSettingsForm({ api, t, notifySaved }: Watermark
         >
           <Input placeholder={`${DEFAULT_SETTINGS.text}`} maxLength={200} />
         </Form.Item>
-        <Form.Item name="opacity" label={t('Watermark opacity')} rules={[{ required: true }]}>
-          <InputNumber min={0.05} max={1} step={0.05} style={{ width: 200 }} />
+        <Form.Item
+          name="opacity"
+          label={t('Watermark opacity')}
+          extra={t('Current opacity', { value: opacityValue ?? DEFAULT_SETTINGS.opacity })}
+          rules={[{ required: true }]}
+        >
+          <Slider min={0.05} max={1} step={0.05} />
         </Form.Item>
         <Form.Item name="fontSize" label={t('Watermark font size')} rules={[{ required: true }]}>
           <InputNumber min={8} max={64} step={1} style={{ width: 200 }} addonAfter="px" />

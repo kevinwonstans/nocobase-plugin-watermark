@@ -4,6 +4,7 @@
   "Enable watermark": "Enable watermark",
   "Watermark text": "Watermark text",
   "Watermark opacity": "Opacity",
+  "Current opacity": "Current opacity: {{value}}",
   "Watermark font size": "Font size",
   "Watermark density": "Density",
   "Sparse": "Sparse",

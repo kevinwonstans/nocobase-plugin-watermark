@@ -12,7 +12,7 @@ interface ApiLike {
 }
 interface WatermarkSettingsFormProps {
     api: ApiLike;
-    t: (key: string) => string;
+    t: (key: string, options?: Record<string, unknown>) => string;
     /** 保存成功后通知水印运行时立即刷新 */
     notifySaved: () => void;
 }
