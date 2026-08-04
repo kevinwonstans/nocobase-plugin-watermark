@@ -1,0 +1,16 @@
+{
+  "Watermark": "Watermark",
+  "Watermark Settings": "Watermark Settings",
+  "Enable watermark": "Enable watermark",
+  "Watermark text": "Watermark text",
+  "Watermark opacity": "Opacity",
+  "Watermark font size": "Font size",
+  "Watermark density": "Density",
+  "Sparse": "Sparse",
+  "Medium": "Medium",
+  "Dense": "Dense",
+  "Placeholder help": "Placeholders: {{user}} (current username), {{date}} (current date)",
+  "Watermark text is required": "Watermark text is required",
+  "Save": "Save",
+  "Saved successfully": "Saved successfully"
+}

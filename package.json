@@ -1,0 +1,34 @@
+{
+  "name": "nocobase-plugin-watermark",
+  "version": "1.0.0",
+  "main": "dist/server/index.js",
+  "displayName": "Watermark",
+  "displayName.zh-CN": "水印",
+  "description": "Global semi-transparent watermark showing the current logged-in user and date, to prevent screenshots from leaking information.",
+  "description.zh-CN": "全局半透明水印，显示当前登录用户名与日期，防止截图泄密。",
+  "keywords": [
+    "watermark",
+    "security",
+    "anti-screenshot",
+    "水印",
+    "防泄密"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kevinwonstans/nocobase-plugin-watermark",
+  "files": [
+    "dist",
+    "client.js",
+    "client.d.ts",
+    "client-v2.js",
+    "client-v2.d.ts",
+    "server.js",
+    "server.d.ts",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@nocobase/client": "2.x",
+    "@nocobase/client-v2": "2.x",
+    "@nocobase/database": "2.x",
+    "@nocobase/server": "2.x"
+  }
+}
