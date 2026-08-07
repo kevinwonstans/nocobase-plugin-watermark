@@ -41,13 +41,13 @@ const DENSITIES: WatermarkDensity[] = ['sparse', 'medium', 'dense'];
 const AUTH_ROUTE_PREFIXES = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
 /**
- * 密度 -> 平铺单元之间的间距（px）。
- * 水印单元宽度随文字自适应（不限制文字宽度），密度通过单元间距体现。
+ * 密度 -> 平铺单元之间的横向/纵向间距（px）。
+ * 水印单元宽度随文字自适应（不限制文字宽度），密度通过单元四周间距体现。
  */
-const DENSITY_GAP: Record<WatermarkDensity, number> = {
-  sparse: 160,
-  medium: 110,
-  dense: 60,
+const DENSITY_GAP: Record<WatermarkDensity, { x: number; y: number }> = {
+  sparse: { x: 140, y: 160 },
+  medium: { x: 100, y: 110 },
+  dense: { x: 50, y: 60 },
 };
 
 /** 定时检测周期（5s，保证登出/进入公共页面后 30s 内移除） */
@@ -116,17 +116,18 @@ function estimateTextWidth(text: string, fontSize: number): number {
  * 生成单个平铺单元的 SVG（旋转 -25° 的半透明文字）。
  *
  * 排版规则：
- * - 不限制文字宽度：单元宽度自适应最长一行文字，文字永不截断
+ * - 不限制文字宽度：单元宽度随文字自适应（另加横向密度间距），文字永不截断
  * - 换行显示：按文字中的换行符分行（如用户名与日期各占一行）
- * - 单元高度 = 行数 x 行高 + 密度间距；文字整体在单元内水平垂直居中
+ * - 单元尺寸 = 旋转后文字包围盒 + 边距 + 密度间距（横向 x / 纵向 y）
+ * - 文字整体在内容区（不含右/下间距）内水平垂直居中
  */
 function buildWatermarkSvg(options: {
   text: string;
   fontSize: number;
   opacity: number;
-  densityGap: number;
+  gap: { x: number; y: number };
 }): string {
-  const { text, fontSize, opacity, densityGap } = options;
+  const { text, fontSize, opacity, gap } = options;
   // 按用户换行符分行；去掉首尾空行，保留中间空行（可作行间距）
   const lines = text.split('\n');
   while (lines.length && !lines[0]) lines.shift();
@@ -144,10 +145,11 @@ function buildWatermarkSvg(options: {
   const rotatedH = contentWidth * sin + contentHeight * cos;
 
   const margin = fontSize * 0.6;
-  const width = Math.ceil(rotatedW + margin * 2);
-  const height = Math.ceil(rotatedH + margin * 2 + densityGap);
-  // 文字在"内容区"（不含底部密度间距）垂直居中
-  const cy = (height - densityGap) / 2;
+  const width = Math.ceil(rotatedW + margin * 2 + gap.x);
+  const height = Math.ceil(rotatedH + margin * 2 + gap.y);
+  // 文字在"内容区"（不含右/下密度间距）内居中
+  const cx = (width - gap.x) / 2;
+  const cy = (height - gap.y) / 2;
   const startY = cy - contentHeight / 2 + lineHeight / 2;
   const tspans = lines
     .map((line, index) => {
@@ -157,7 +159,7 @@ function buildWatermarkSvg(options: {
     .join('');
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<g transform="rotate(-25 ${width / 2} ${cy})">`,
+    `<g transform="rotate(-25 ${cx} ${cy})">`,
     `<text text-anchor="middle" dominant-baseline="middle" font-family="'Microsoft YaHei','PingFang SC',Arial,sans-serif" font-size="${fontSize}" fill="rgba(0,0,0,${opacity})">${tspans}</text>`,
     `</g></svg>`,
   ].join('');
@@ -383,12 +385,12 @@ export class WatermarkManager {
   /** 根据当前设置与用户生成期望的背景样式（渲染与健康检查共用） */
   private buildBackground(): { image: string; size: string } {
     const settings = this.settings || DEFAULT_SETTINGS;
-    const densityGap = DENSITY_GAP[settings.density] || DENSITY_GAP.medium;
+    const gap = DENSITY_GAP[settings.density] || DENSITY_GAP.medium;
     const svg = buildWatermarkSvg({
       text: this.resolveText(),
       fontSize: settings.fontSize,
       opacity: settings.opacity,
-      densityGap,
+      gap,
     });
     return {
       image: `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`,
