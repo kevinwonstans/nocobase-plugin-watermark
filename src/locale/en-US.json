@@ -10,7 +10,7 @@
   "Sparse": "Sparse",
   "Medium": "Medium",
   "Dense": "Dense",
-  "Placeholder help": "Placeholders: {{user}} (current username), {{date}} (current date)",
+  "Placeholder help": "Placeholders: {{user}} (current username), {{date}} (current date). Use line breaks to display on separate lines, e.g. username and date each on its own line.",
   "Watermark text is required": "Watermark text is required",
   "Save": "Save",
   "Saved successfully": "Saved successfully"

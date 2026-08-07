@@ -110,7 +110,15 @@ function WatermarkSettingsForm({ api, t, notifySaved }) {
           extra: t("Placeholder help"),
           rules: [{ required: true, message: t("Watermark text is required") }]
         },
-        /* @__PURE__ */ import_react.default.createElement(import_antd.Input, { placeholder: `${import_watermark.DEFAULT_SETTINGS.text}`, maxLength: 200 })
+        /* @__PURE__ */ import_react.default.createElement(
+          import_antd.Input.TextArea,
+          {
+            placeholder: `${import_watermark.DEFAULT_SETTINGS.text}`,
+            autoSize: { minRows: 2, maxRows: 4 },
+            maxLength: 200,
+            showCount: true
+          }
+        )
       ),
       /* @__PURE__ */ import_react.default.createElement(
         import_antd.Form.Item,

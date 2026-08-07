@@ -34,17 +34,17 @@ module.exports = __toCommonJS(watermark_exports);
 const WATERMARK_SETTINGS_CHANGED_EVENT = "nocobase-plugin-watermark:settingsChanged";
 const DEFAULT_SETTINGS = {
   enabled: true,
-  text: "{{user}} {{date}}",
+  text: "{{user}}\n{{date}}",
   opacity: 0.15,
   fontSize: 16,
   density: "medium"
 };
 const DENSITIES = ["sparse", "medium", "dense"];
 const AUTH_ROUTE_PREFIXES = ["/signin", "/signup", "/forgot-password", "/reset-password"];
-const DENSITY_TILE_SIZE = {
-  sparse: 320,
-  medium: 220,
-  dense: 140
+const DENSITY_GAP = {
+  sparse: 160,
+  medium: 110,
+  dense: 60
 };
 const SYNC_INTERVAL = 5e3;
 const SETTINGS_TTL = 3e4;
@@ -60,34 +60,38 @@ function formatDate(date) {
 function escapeXml(value) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-function wrapText(text, maxChars) {
-  const lines = [];
-  const limit = Math.max(1, maxChars);
-  for (const rawLine of text.split("\n")) {
-    if (!rawLine) {
-      lines.push("");
-      continue;
-    }
-    for (let i = 0; i < rawLine.length; i += limit) {
-      lines.push(rawLine.slice(i, i + limit));
-    }
+function estimateTextWidth(text, fontSize) {
+  let width = 0;
+  for (const ch of text) {
+    width += ch.charCodeAt(0) > 11904 ? fontSize : fontSize * 0.55;
   }
-  return lines;
+  return width;
 }
 function buildWatermarkSvg(options) {
-  const { text, fontSize, opacity, size } = options;
-  const maxChars = Math.floor(size * 0.85 / fontSize);
-  const lines = wrapText(text, maxChars);
+  const { text, fontSize, opacity, densityGap } = options;
+  const lines = text.split("\n");
+  while (lines.length && !lines[0]) lines.shift();
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
   const lineHeight = fontSize * 1.4;
-  const totalHeight = lines.length * lineHeight;
-  const startY = size / 2 - totalHeight / 2 + lineHeight / 2;
+  const contentWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize)), fontSize);
+  const contentHeight = lines.length * lineHeight;
+  const angle = 25 * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const rotatedW = contentWidth * cos + contentHeight * sin;
+  const rotatedH = contentWidth * sin + contentHeight * cos;
+  const margin = fontSize * 0.6;
+  const width = Math.ceil(rotatedW + margin * 2);
+  const height = Math.ceil(rotatedH + margin * 2 + densityGap);
+  const cy = (height - densityGap) / 2;
+  const startY = cy - contentHeight / 2 + lineHeight / 2;
   const tspans = lines.map((line, index) => {
     const y = startY + index * lineHeight;
     return `<tspan x="50%" y="${y}">${escapeXml(line)}</tspan>`;
   }).join("");
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
-    `<g transform="rotate(-25 ${size / 2} ${size / 2})">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<g transform="rotate(-25 ${width / 2} ${cy})">`,
     `<text text-anchor="middle" dominant-baseline="middle" font-family="'Microsoft YaHei','PingFang SC',Arial,sans-serif" font-size="${fontSize}" fill="rgba(0,0,0,${opacity})">${tspans}</text>`,
     `</g></svg>`
   ].join("");
@@ -284,16 +288,17 @@ class WatermarkManager {
   /** 根据当前设置与用户生成期望的背景样式（渲染与健康检查共用） */
   buildBackground() {
     const settings = this.settings || DEFAULT_SETTINGS;
-    const size = DENSITY_TILE_SIZE[settings.density] || DENSITY_TILE_SIZE.medium;
+    const densityGap = DENSITY_GAP[settings.density] || DENSITY_GAP.medium;
     const svg = buildWatermarkSvg({
       text: this.resolveText(),
       fontSize: settings.fontSize,
       opacity: settings.opacity,
-      size
+      densityGap
     });
     return {
       image: `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`,
-      size: `${size}px ${size}px`
+      // 单元宽度随文字自适应，不限制文字区块宽度
+      size: "auto"
     };
   }
   render() {

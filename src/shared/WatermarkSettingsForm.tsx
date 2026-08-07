@@ -97,7 +97,12 @@ export default function WatermarkSettingsForm({ api, t, notifySaved }: Watermark
           extra={t('Placeholder help')}
           rules={[{ required: true, message: t('Watermark text is required') }]}
         >
-          <Input placeholder={`${DEFAULT_SETTINGS.text}`} maxLength={200} />
+          <Input.TextArea
+            placeholder={`${DEFAULT_SETTINGS.text}`}
+            autoSize={{ minRows: 2, maxRows: 4 }}
+            maxLength={200}
+            showCount
+          />
         </Form.Item>
         <Form.Item
           name="opacity"

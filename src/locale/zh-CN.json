@@ -10,7 +10,7 @@
   "Sparse": "稀疏",
   "Medium": "中等",
   "Dense": "密集",
-  "Placeholder help": "支持占位符 {{user}}（当前登录用户名）、{{date}}（当天日期）",
+  "Placeholder help": "支持占位符 {{user}}（当前登录用户名）、{{date}}（当天日期）；换行可分行显示，如用户名与日期各占一行",
   "Watermark text is required": "水印文字不能为空",
   "Save": "保存",
   "Saved successfully": "保存成功"

@@ -5,6 +5,7 @@
  * - 登录成功后在全页覆盖半透明水印（当前登录用户名 + 日期），防止截图泄密
  * - 登录页、注册页等公共页面以及未登录时自动移除水印，30s 内生效
  * - 定时检测 + MutationObserver 监听，水印 DOM 被删除后立即重建
+ * - 水印文字支持换行多行排版（默认用户名与日期各占一行），文字宽度自适应不截断
  * - 支持配置水印文字、透明度、字号、排列密度与总开关
  */
 
@@ -28,7 +29,7 @@ export interface WatermarkSettings {
 
 export const DEFAULT_SETTINGS: WatermarkSettings = {
   enabled: true,
-  text: '{{user}} {{date}}',
+  text: '{{user}}\n{{date}}',
   opacity: 0.15,
   fontSize: 16,
   density: 'medium',
@@ -39,11 +40,14 @@ const DENSITIES: WatermarkDensity[] = ['sparse', 'medium', 'dense'];
 /** 认证类公共页面（登录/注册/找回密码等），这些页面不显示水印 */
 const AUTH_ROUTE_PREFIXES = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
-/** 密度 -> 平铺单元尺寸（px） */
-const DENSITY_TILE_SIZE: Record<WatermarkDensity, number> = {
-  sparse: 320,
-  medium: 220,
-  dense: 140,
+/**
+ * 密度 -> 平铺单元之间的间距（px）。
+ * 水印单元宽度随文字自适应（不限制文字宽度），密度通过单元间距体现。
+ */
+const DENSITY_GAP: Record<WatermarkDensity, number> = {
+  sparse: 160,
+  medium: 110,
+  dense: 60,
 };
 
 /** 定时检测周期（5s，保证登出/进入公共页面后 30s 内移除） */
@@ -99,36 +103,52 @@ function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/** 超长文字自动换行，避免超出平铺单元 */
-function wrapText(text: string, maxChars: number): string[] {
-  const lines: string[] = [];
-  const limit = Math.max(1, maxChars);
-  for (const rawLine of text.split('\n')) {
-    if (!rawLine) {
-      lines.push('');
-      continue;
-    }
-    for (let i = 0; i < rawLine.length; i += limit) {
-      lines.push(rawLine.slice(i, i + limit));
-    }
+/** 估算文本宽度：CJK 全角字符约 1em，其余字符约 0.55em */
+function estimateTextWidth(text: string, fontSize: number): number {
+  let width = 0;
+  for (const ch of text) {
+    width += ch.charCodeAt(0) > 0x2e80 ? fontSize : fontSize * 0.55;
   }
-  return lines;
+  return width;
 }
 
-/** 生成单个平铺单元的 SVG（旋转 -25° 的半透明文字） */
+/**
+ * 生成单个平铺单元的 SVG（旋转 -25° 的半透明文字）。
+ *
+ * 排版规则：
+ * - 不限制文字宽度：单元宽度自适应最长一行文字，文字永不截断
+ * - 换行显示：按文字中的换行符分行（如用户名与日期各占一行）
+ * - 单元高度 = 行数 x 行高 + 密度间距；文字整体在单元内水平垂直居中
+ */
 function buildWatermarkSvg(options: {
   text: string;
   fontSize: number;
   opacity: number;
-  size: number;
+  densityGap: number;
 }): string {
-  const { text, fontSize, opacity, size } = options;
-  // CJK 字符宽度约等于 1em
-  const maxChars = Math.floor((size * 0.85) / fontSize);
-  const lines = wrapText(text, maxChars);
+  const { text, fontSize, opacity, densityGap } = options;
+  // 按用户换行符分行；去掉首尾空行，保留中间空行（可作行间距）
+  const lines = text.split('\n');
+  while (lines.length && !lines[0]) lines.shift();
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
+
   const lineHeight = fontSize * 1.4;
-  const totalHeight = lines.length * lineHeight;
-  const startY = size / 2 - totalHeight / 2 + lineHeight / 2;
+  const contentWidth = Math.max(...lines.map((line) => estimateTextWidth(line, fontSize)), fontSize);
+  const contentHeight = lines.length * lineHeight;
+
+  // 文字旋转 25° 后的包围盒，保证单元内不裁切
+  const angle = (25 * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const rotatedW = contentWidth * cos + contentHeight * sin;
+  const rotatedH = contentWidth * sin + contentHeight * cos;
+
+  const margin = fontSize * 0.6;
+  const width = Math.ceil(rotatedW + margin * 2);
+  const height = Math.ceil(rotatedH + margin * 2 + densityGap);
+  // 文字在"内容区"（不含底部密度间距）垂直居中
+  const cy = (height - densityGap) / 2;
+  const startY = cy - contentHeight / 2 + lineHeight / 2;
   const tspans = lines
     .map((line, index) => {
       const y = startY + index * lineHeight;
@@ -136,8 +156,8 @@ function buildWatermarkSvg(options: {
     })
     .join('');
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
-    `<g transform="rotate(-25 ${size / 2} ${size / 2})">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<g transform="rotate(-25 ${width / 2} ${cy})">`,
     `<text text-anchor="middle" dominant-baseline="middle" font-family="'Microsoft YaHei','PingFang SC',Arial,sans-serif" font-size="${fontSize}" fill="rgba(0,0,0,${opacity})">${tspans}</text>`,
     `</g></svg>`,
   ].join('');
@@ -363,16 +383,17 @@ export class WatermarkManager {
   /** 根据当前设置与用户生成期望的背景样式（渲染与健康检查共用） */
   private buildBackground(): { image: string; size: string } {
     const settings = this.settings || DEFAULT_SETTINGS;
-    const size = DENSITY_TILE_SIZE[settings.density] || DENSITY_TILE_SIZE.medium;
+    const densityGap = DENSITY_GAP[settings.density] || DENSITY_GAP.medium;
     const svg = buildWatermarkSvg({
       text: this.resolveText(),
       fontSize: settings.fontSize,
       opacity: settings.opacity,
-      size,
+      densityGap,
     });
     return {
       image: `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`,
-      size: `${size}px ${size}px`,
+      // 单元宽度随文字自适应，不限制文字区块宽度
+      size: 'auto',
     };
   }
 
